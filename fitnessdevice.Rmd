@@ -1,0 +1,96 @@
+---
+title: "fitnessdevice"
+author: "Patricia"
+date: "October 9, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Fitness Device Analysis
+
+First, load input data
+
+```{r readdata}
+setwd("C:/Users/trish/Desktop/coursera/rprogram/reproducible research")
+fitness<-read.csv(file="activity.csv", header=TRUE, sep=",")
+
+```
+## plot histogram of daily steps
+
+```{r plothist}
+dailytotal<-aggregate(x=fitness$steps, by=list(fitness$date), FUN=sum)
+names(dailytotal)<-c('date', 'steps')
+hist(dailytotal$steps)
+
+```
+
+## Calculate mean and median daily statistics
+
+```{r calcstats}
+dailymean<-mean(dailytotal$steps, na.rm=TRUE)
+dailymedian<-median(dailytotal$steps, na.rm=TRUE)
+
+```
+Average daily steps is `r  dailymean`.  
+
+Median daily steps is `r dailymedian`.  
+
+
+## Including Plots
+
+This is a time series of the daily steps:  
+
+```{r timeseries, echo=FALSE}
+plot(dailytotal,main="Time Series of Daily Steps", rm.na=TRUE)
+lines(dailytotal)
+```
+
+## STEP 5 
+```{r maxinterval, echo=FALSE}
+  library(dplyr)
+    getmode <- function(v) {
+        uniqv <- unique(v)
+        uniqv[which.max(tabulate(match(v, uniqv)))]
+                           }
+  fitness1<-fitness
+  maxinterval<-fitness1%>% group_by(date)%>%filter(steps==max(steps))
+  mdint<-getmode(maxinterval$interval)
+```
+
+The 5 minute interval with the most steps on average is `r mdint`.  
+
+## Step 6
+```{r treatna, echo=FALSE}
+        impute <- function(x, fun) {
+        missing <- is.na(x)
+        replace(x, missing, fun(x[!missing]))
+                              }  
+         fitness2<-fitness
+        fitness2$interval<-as.factor(fitness2$interval)
+        meanstepstb<-fitness2 %>% group_by(interval)%>%summarise(meanint=mean(as.numeric(steps),na.rm=TRUE) )
+      
+   fitness_nona<-fitness2 %>%group_by(interval) %>% mutate(steps = impute(steps, mean) )
+   cleandailymean<-fitness_nona%>%group_by(date)%>%summarise(dailystep=sum(steps))
+```
+ I replaced na values with mean value for the relevant interval.
+ 
+## Step 7 
+Plot histogram of cleand data
+```{r plotclean, echo=FALSE}
+        hist(cleandailymean$dailystep)
+```
+ 
+## Step 8 Panel plot of average per interval
+
+```{r panelplot, echo=FALSE}
+    fitness4<-fitness_nona
+    fitness4$weekend = chron::is.weekend(fitness4$date)
+    s4<- fitness4%>% group_by(interval, weekend)%>%summarise(intervalmean=mean(steps))
+    s4<-s4%>% mutate(wl=if_else(weekend, "Weekend", "Weekday")) 
+    xyplot(s4$intervalmean~as.numeric(s4$interval)|s4$wl, main="Ave steps per interval for weekdays and weekends", 
+            ylab="Average steps in interval", xlab="interval")
+```
+
